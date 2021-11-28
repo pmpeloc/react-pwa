@@ -80,3 +80,27 @@ self.addEventListener('install', async (event) => {
     '/favicon.ico',
   ]);
 });
+
+self.addEventListener('fetch', (event) => {
+  const apiOfflineFallbacks = [
+    'http://localhost:4000/api/auth/renew',
+    'http://localhost:4000/api/events',
+  ];
+  if (!apiOfflineFallbacks.includes(event.request.url)) return;
+  const resp = fetch(event.request)
+    .then((response) => {
+      if (!response) {
+        return caches.match(event.request);
+      }
+      // Guardar en cache la respuesta
+      caches.open('cache-dynamic').then((cache) => {
+        cache.put(event.request, response);
+      });
+      return response.clone();
+    })
+    .catch((err) => {
+      console.log('offline response');
+      return caches.match(event.request);
+    });
+  event.respondWith(resp);
+});
